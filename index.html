@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FolhaFácil Pro - Gestão de Folha de Pagamento & Rescisão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#1e40af'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-md py-4 px-4 sm:px-8">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm">
+                    <i class="fa-solid fa-file-invoice-dollar text-2xl text-blue-200"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight">FolhaFácil Pro</h1>
+                    <p class="text-xs text-blue-200">Gestão de Funcionários, Holerites e Rescisões</p>
+                </div>
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto justify-end">
+                <button onclick="exportData()" class="bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-medium py-2 px-3 rounded-lg backdrop-blur-sm transition flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i> Exportar Dados
+                </button>
+                <label class="bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-medium py-2 px-3 rounded-lg backdrop-blur-sm transition flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-upload"></i> Importar
+                    <input type="file" id="importFile" onchange="importData(event)" class="hidden" accept=".json">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto w-full p-3 sm:p-6 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Column 1 & 2: Employees & Actions -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Quick Stats & Actions Card -->
+            <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Funcionários Cadastrados</h2>
+                    <p class="text-xs text-slate-500">Clique no nome do funcionário para ver o perfil completo, histórico e rescisão.</p>
+                </div>
+                <button onclick="openEmployeeModal()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-user-plus"></i> Novo Funcionário
+                </button>
+            </div>
+
+            <!-- Employee List Table / Cards -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100/70 text-slate-600 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
+                                <th class="py-3 px-4">Funcionário</th>
+                                <th class="py-3 px-4">Salário Base</th>
+                                <th class="py-3 px-4">Admissão</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeeTableBody" class="divide-y divide-slate-100 text-sm">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyEmployeeState" class="hidden p-8 text-center text-slate-400">
+                    <i class="fa-solid fa-users-slash text-3xl mb-2"></i>
+                    <p>Nenhum funcionário cadastrado ainda.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Column 3: Quick Holerite Generator -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 sticky top-4">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-blue-600"></i> Gerar Holerite
+                    </h2>
+                    <span class="text-xs bg-blue-50 text-blue-700 font-medium px-2.5 py-1 rounded-full">Mensal / Parcial</span>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Selecionar Funcionário</label>
+                        <select id="holeriteEmployeeSelect" onchange="loadEmployeeHoleriteDefaults()" class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Mês / Ano</label>
+                            <input type="month" id="holeriteMonth" class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Dias Pagos (Ref.)</label>
+                            <input type="number" id="holeritePaidDays" value="30" min="1" max="30" oninput="calculateHoleritePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Bonus & Gratifications (Proventos - Verde Suave com Múltiplos Adicionais) -->
+                    <div class="space-y-3 pt-2 border-t border-slate-100">
+                        <h3 class="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus-circle"></i> Bônus & Gratificações (Proventos)
+                        </h3>
+                        
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Bônus por Percentual (%) [Padrão: 8%]</label>
+                            <input type="number" id="holeriteBonusPercent" value="8" step="0.1" oninput="calculateHoleritePreview()" class="w-full bg-emerald-50/50 border border-emerald-200 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="Ex: 8">
+                        </div>
+
+                        <!-- Dynamic Proventos Manager -->
+                        <div class="bg-emerald-50/40 p-3 rounded-xl border border-emerald-200 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-bold text-emerald-900">Múltiplos Proventos / Adicionais</label>
+                                <button type="button" onclick="addProventoInput()" class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-medium py-1 px-2.5 rounded-lg transition">
+                                    <i class="fa-solid fa-plus"></i> Adicionar Provento
+                                </button>
+                            </div>
+                            <div id="proventosContainer" class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                                <!-- Dynamic provento rows -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Discounts & Advances & Absences (Descontos - Rose Suave) -->
+                    <div class="space-y-3 pt-2 border-t border-slate-100">
+                        <h3 class="text-xs font-bold text-rose-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-minus-circle"></i> Descontos, Vales & Faltas
+                        </h3>
+
+                        <!-- Dynamic Vales / Disparates Manager -->
+                        <div class="bg-rose-50/40 p-3 rounded-xl border border-rose-200 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-bold text-rose-900">Múltiplos Descontos / Vales</label>
+                                <button type="button" onclick="addValeInput()" class="text-xs bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium py-1 px-2.5 rounded-lg transition">
+                                    <i class="fa-solid fa-plus"></i> Adicionar Vale
+                                </button>
+                            </div>
+                            <div id="valesContainer" class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                                <!-- Dynamic vale rows -->
+                            </div>
+                        </div>
+
+                        <!-- Advanced Absence Manager -->
+                        <div class="bg-rose-50/40 p-3 rounded-xl border border-rose-200 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-xs font-bold text-rose-900">Controle de Faltas por Data</label>
+                                <button type="button" onclick="addAbsenceDateInput()" class="text-xs bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium py-1 px-2.5 rounded-lg transition">
+                                    <i class="fa-solid fa-plus"></i> Adicionar Data
+                                </button>
+                            </div>
+                            <div id="absenceDatesContainer" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                <!-- Dynamic absence date inputs -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Itemized Preview & Totals -->
+                    <div class="bg-blue-50/70 p-4 rounded-xl border border-blue-100 space-y-3">
+                        <div class="text-xs font-bold text-blue-900 uppercase tracking-wider border-b border-blue-200 pb-1">Resumo Detalhado (Prévia)</div>
+                        <div id="previewItemizedList" class="space-y-1 text-xs text-slate-700">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <div class="pt-2 border-t border-blue-200 space-y-1">
+                            <div class="flex justify-between text-xs text-slate-600">
+                                <span>Total Proventos:</span>
+                                <span id="previewProventos" class="font-semibold text-slate-800">R$ 0,00</span>
+                            </div>
+                            <div class="flex justify-between text-xs text-slate-600">
+                                <span>Total Descontos:</span>
+                                <span id="previewDescontos" class="font-semibold text-rose-600">R$ 0,00</span>
+                            </div>
+                            <div class="flex justify-between text-sm font-bold text-blue-900 pt-1">
+                                <span>Líquido a Receber:</span>
+                                <span id="previewLiquido" class="text-blue-700 text-base">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="generateAndSaveHolerite()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-check-circle"></i> Salvar e Emitir Holerite
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- EMPLOYEE MODAL (Profile, History & Rescisão) -->
+    <div id="employeeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
+            <div class="sticky top-0 bg-white z-10 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <div>
+                    <h2 id="modalEmployeeNameTitle" class="text-lg sm:text-xl font-bold text-slate-900">Perfil do Funcionário</h2>
+                    <p class="text-xs text-slate-500">Visualize dados, histórico de holerites e cálculo rescisório.</p>
+                </div>
+                <button onclick="closeEmployeeModal()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Tabs -->
+                <div class="flex border-b border-slate-200 gap-6">
+                    <button onclick="switchModalTab('dados')" id="tabBtnDados" class="pb-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition">Dados Cadastrais</button>
+                    <button onclick="switchModalTab('historico')" id="tabBtnHistorico" class="pb-3 text-sm font-semibold text-slate-500 hover:text-slate-800 transition">Histórico de Holerites</button>
+                    <button onclick="switchModalTab('rescisao')" id="tabBtnRescisao" class="pb-3 text-sm font-semibold text-slate-500 hover:text-slate-800 transition">Cálculo de Rescisão</button>
+                </div>
+
+                <!-- Tab 1: Dados Cadastrais -->
+                <div id="modalTabDados" class="space-y-4">
+                    <form id="employeeForm" onsubmit="saveEmployee(event)" class="space-y-4">
+                        <input type="hidden" id="editEmployeeId">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Nome Completo</label>
+                                <input type="text" id="empName" required class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ex: João Silva">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Salário Base (R$)</label>
+                                <input type="number" id="empSalary" step="0.01" required class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Ex: 3000.00">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Data de Admissão</label>
+                                <input type="date" id="empAdmission" required class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Data de Demissão (Opcional)</label>
+                                <input type="date" id="empDismissal" class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2.5 px-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                            <button type="button" onclick="closeEmployeeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition">Cancelar</button>
+                            <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md transition">Salvar Funcionário</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab 2: Histórico de Holerites -->
+                <div id="modalTabHistorico" class="space-y-4 hidden">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-slate-800">Holerites Emitidos</h3>
+                        <span id="historyCount" class="text-xs text-slate-500">0 holerite(s)</span>
+                    </div>
+                    <div id="employeeHistoryList" class="space-y-3">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Tab 3: Cálculo de Rescisão -->
+                <div id="modalTabRescisao" class="space-y-4 hidden">
+                    <!-- Rescission Configuration Options -->
+                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Parâmetros da Rescisão</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de Aviso Prévio</label>
+                                <select id="rescisaoAvisoTipo" onchange="onRescisaoParamChange()" class="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    <option value="indenizado">Indenizado (Empresa paga)</option>
+                                    <option value="trabalhado">Trabalhado / Cumprido</option>
+                                    <option value="dispensado">Dispensado pelo empregado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Multa do FGTS</label>
+                                <select id="rescisaoMultaFgts" onchange="onRescisaoParamChange()" class="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    <option value="40">40% (Sem justa causa)</option>
+                                    <option value="50">50% (Acordo coletivo / Outros)</option>
+                                    <option value="20">20% (Demissão por acordo comum)</option>
+                                    <option value="0">0% (Sem multa / Pedido)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h4 class="text-sm font-bold text-blue-900">Simulação de Rescisão Trabalhista</h4>
+                            <p class="text-xs text-blue-700">Ative/desative os itens com o botão iOS, edite os valores livremente ou recalcule.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="recalculateRescisaoDefaults()" class="bg-slate-600 hover:bg-slate-700 text-white text-xs font-semibold py-2.5 px-3 rounded-xl shadow transition" title="Recalcular com base nas datas e salário">
+                                Recalcular Automático
+                            </button>
+                            <button onclick="generateAndSaveRescisaoPDF()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl shadow transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-pdf"></i> Salvar e Emitir PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="rescisaoResultBox" class="space-y-3">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOLERITE VIEW MODAL -->
+    <div id="holeritePrintModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center print:hidden">
+                <h3 class="text-lg font-bold text-slate-900">Visualizar Holerite</h3>
+                <div class="flex gap-2">
+                    <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Imprimir / PDF
+                    </button>
+                    <button onclick="closeHoleritePrintModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg transition">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Holerite Paper -->
+            <div id="holeritePaperContent" class="border border-slate-300 rounded-2xl p-6 bg-white text-slate-800 space-y-4">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- RESCISAO PDF VIEW MODAL -->
+    <div id="rescisaoPrintModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center print:hidden">
+                <h3 class="text-lg font-bold text-slate-900">Termo de Rescisão de Contrato (TRCT - Simulação)</h3>
+                <div class="flex gap-2">
+                    <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Imprimir / PDF
+                    </button>
+                    <button onclick="closeRescisaoPrintModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg transition">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rescisao Paper Content -->
+            <div id="rescisaoPaperContent" class="border border-slate-300 rounded-2xl p-6 bg-white text-slate-800 space-y-4">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-400 border-t border-slate-200 mt-auto">
+        FolhaFácil Pro &bull; Dados salvos automaticamente no seu navegador
+    </footer>
+
+    <!-- Main Logic Script -->
+    <script>
+        let db = {
+            employees: JSON.parse(localStorage.getItem('ff_employees')) || [],
+            holerites: JSON.parse(localStorage.getItem('ff_holerites')) || []
+        };
+
+        let currentActiveEmployeeId = null;
+        let rescisaoState = {};
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('ff_employees', JSON.stringify(db.employees));
+            localStorage.setItem('ff_holerites', JSON.stringify(db.holerites));
+        }
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            const monthInput = document.getElementById('holeriteMonth');
+            if (monthInput && !monthInput.value) {
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                monthInput.value = `${yyyy}-${mm}`;
+            }
+            renderEmployees();
+            updateEmployeeSelect();
+            addProventoInput('Gratificações', 0);
+            addValeInput('Desconto de Vales', 0);
+            addAbsenceDateInput();
+        });
+
+        // --- National, State (SP) & Municipal (Franca/SP) Holidays Calculation ---
+        function getBrazilianHolidays(year) {
+            let holidays = [
+                new Date(year, 0, 1),   // 01/01 - Confraternização Universal (Nacional)
+                new Date(year, 3, 21),  // 21/04 - Tiradentes (Nacional)
+                new Date(year, 4, 1),   // 01/05 - Dia do Trabalho (Nacional)
+                new Date(year, 6, 9),   // 09/07 - Revolução Constitucionalista (Estadual SP)
+                new Date(year, 8, 7),   // 07/09 - Independência do Brasil (Nacional)
+                new Date(year, 9, 12),  // 12/10 - N. Sra. Aparecida (Nacional)
+                new Date(year, 10, 2),  // 02/11 - Finados (Nacional)
+                new Date(year, 10, 15), // 15/11 - Proclamação da República (Nacional)
+                new Date(year, 10, 28), // 28/11 - Aniversário de Franca/SP (Municipal)
+                new Date(year, 11, 25)  // 25/12 - Natal (Nacional)
+            ];
+
+            let a = year % 19;
+            let b = Math.floor(year / 100);
+            let c = year % 100;
+            let d = Math.floor(b / 4);
+            let e = b % 4;
+            let f = Math.floor((b + 8) / 25);
+            let g = Math.floor((b - f + 1) / 3);
+            let h = (19 * a + b - d - g + 15) % 30;
+            let i = Math.floor(c / 4);
+            let k = c % 4;
+            let l = (32 + 2 * e + 2 * i - h - k) % 7;
+            let m = Math.floor((a + 11 * h + 22 * l) / 451);
+            let month = Math.floor((h + l - 7 * m + 114) / 31);
+            let day = ((h + l - 7 * m + 114) % 31) + 1;
+
+            let easter = new Date(year, month - 1, day);
+            let goodFriday = new Date(easter);
+            goodFriday.setDate(easter.getDate() - 2);
+            holidays.push(goodFriday);
+
+            let corpusChristi = new Date(easter);
+            corpusChristi.setDate(easter.getDate() + 60);
+            holidays.push(corpusChristi);
+
+            return holidays;
+        }
+
+        // --- Employee Management ---
+        function renderEmployees() {
+            const tbody = document.getElementById('employeeTableBody');
+            const emptyState = document.getElementById('emptyEmployeeState');
+            tbody.innerHTML = '';
+
+            if (db.employees.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            db.employees.forEach(emp => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition cursor-pointer';
+                tr.onclick = () => openEmployeeModal(emp.id);
+
+                const formattedSalary = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(emp.salary);
+                const admissionDate = emp.admission ? new Date(emp.admission + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+                const statusBadge = emp.dismissal ? 
+                    `<span class="bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full text-xs font-semibold">Demitido</span>` :
+                    `<span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-semibold">Ativo</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-semibold text-slate-800 flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                            ${emp.name.charAt(0).toUpperCase()}
+                        </div>
+                        ${emp.name}
+                    </td>
+                    <td class="py-3 px-4 text-slate-600">${formattedSalary}</td>
+                    <td class="py-3 px-4 text-slate-600">${admissionDate}</td>
+                    <td class="py-3 px-4">${statusBadge}</td>
+                    <td class="py-3 px-4 text-right" onclick="event.stopPropagation()">
+                        <button onclick="openEmployeeModal('${emp.id}')" class="text-blue-600 hover:text-blue-800 p-1.5 transition" title="Editar">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button onclick="deleteEmployee('${emp.id}')" class="text-rose-600 hover:text-rose-800 p-1.5 transition" title="Excluir">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            updateEmployeeSelect();
+        }
+
+        function updateEmployeeSelect() {
+            const select = document.getElementById('holeriteEmployeeSelect');
+            if (!select) return;
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">Selecione o funcionário...</option>';
+            db.employees.forEach(emp => {
+                const opt = document.createElement('option');
+                opt.value = emp.id;
+                opt.textContent = `${emp.name} (${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(emp.salary)})`;
+                select.appendChild(opt);
+            });
+            select.value = currentVal;
+        }
+
+        function openEmployeeModal(empId = null) {
+            const modal = document.getElementById('employeeModal');
+            modal.classList.remove('hidden');
+            
+            if (empId) {
+                const emp = db.employees.find(e => e.id === empId);
+                if (emp) {
+                    document.getElementById('editEmployeeId').value = emp.id;
+                    document.getElementById('empName').value = emp.name;
+                    document.getElementById('empSalary').value = emp.salary;
+                    document.getElementById('empAdmission').value = emp.admission || '';
+                    document.getElementById('empDismissal').value = emp.dismissal || '';
+                    document.getElementById('modalEmployeeNameTitle').textContent = `Funcionário: ${emp.name}`;
+                    currentActiveEmployeeId = emp.id;
+                    rescisaoState = {};
+                }
+            } else {
+                document.getElementById('employeeForm').reset();
+                document.getElementById('editEmployeeId').value = '';
+                document.getElementById('modalEmployeeNameTitle').textContent = 'Novo Funcionário';
+                currentActiveEmployeeId = null;
+                rescisaoState = {};
+            }
+            switchModalTab('dados');
+            renderEmployeeHistory();
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeModal').classList.add('hidden');
+        }
+
+        function switchModalTab(tab) {
+            document.getElementById('modalTabDados').classList.add('hidden');
+            document.getElementById('modalTabHistorico').classList.add('hidden');
+            document.getElementById('modalTabRescisao').classList.add('hidden');
+
+            document.getElementById('tabBtnDados').className = "pb-3 text-sm font-semibold text-slate-500 hover:text-slate-800 transition border-b-2 border-transparent";
+            document.getElementById('tabBtnHistorico').className = "pb-3 text-sm font-semibold text-slate-500 hover:text-slate-800 transition border-b-2 border-transparent";
+            document.getElementById('tabBtnRescisao').className = "pb-3 text-sm font-semibold text-slate-500 hover:text-slate-800 transition border-b-2 border-transparent";
+
+            if (tab === 'dados') {
+                document.getElementById('modalTabDados').classList.remove('hidden');
+                document.getElementById('tabBtnDados').className = "pb-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition";
+            } else if (tab === 'historico') {
+                document.getElementById('modalTabHistorico').classList.remove('hidden');
+                document.getElementById('tabBtnHistorico').className = "pb-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition";
+                renderEmployeeHistory();
+            } else if (tab === 'rescisao') {
+                document.getElementById('modalTabRescisao').classList.remove('hidden');
+                document.getElementById('tabBtnRescisao').className = "pb-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 transition";
+                initOrLoadRescisaoState();
+            }
+        }
+
+        function saveEmployee(event) {
+            event.preventDefault();
+            const id = document.getElementById('editEmployeeId').value || 'emp_' + Date.now();
+            const name = document.getElementById('empName').value;
+            const salary = parseFloat(document.getElementById('empSalary').value);
+            const admission = document.getElementById('empAdmission').value;
+            const dismissal = document.getElementById('empDismissal').value || null;
+
+            const index = db.employees.findIndex(e => e.id === id);
+            if (index >= 0) {
+                db.employees[index] = { id, name, salary, admission, dismissal };
+            } else {
+                db.employees.push({ id, name, salary, admission, dismissal });
+            }
+
+            saveData();
+            renderEmployees();
+            closeEmployeeModal();
+        }
+
+        function deleteEmployee(id) {
+            if (confirm('Tem certeza que deseja excluir este funcionário e seus registros?')) {
+                db.employees = db.employees.filter(e => e.id !== id);
+                db.holerites = db.holerites.filter(h => h.employeeId !== id);
+                saveData();
+                renderEmployees();
+            }
+        }
+
+        // --- Dynamic Proventos, Vales & Absence Management ---
+        function addProventoInput(titleVal = '', valueVal = 0) {
+            const container = document.getElementById('proventosContainer');
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 items-center provento-row';
+            div.innerHTML = `
+                <div class="sm:col-span-7">
+                    <input type="text" placeholder="Descrição do provento / bônus" value="${titleVal}" oninput="calculateHoleritePreview()" class="w-full bg-white border border-emerald-200 rounded-lg py-1.5 px-2.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none provento-title-input">
+                </div>
+                <div class="sm:col-span-4">
+                    <input type="number" step="0.01" placeholder="Valor R$" value="${valueVal}" oninput="calculateHoleritePreview()" class="w-full bg-white border border-emerald-200 rounded-lg py-1.5 px-2.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none provento-value-input">
+                </div>
+                <div class="sm:col-span-1 text-right">
+                    <button type="button" onclick="this.closest('.provento-row').remove(); calculateHoleritePreview();" class="text-emerald-600 hover:text-emerald-800 p-1.5">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+            calculateHoleritePreview();
+        }
+
+        function getProventosExtras() {
+            const rows = document.querySelectorAll('.provento-row');
+            let list = [];
+            rows.forEach(r => {
+                let title = r.querySelector('.provento-title-input').value.trim() || 'Provento';
+                let val = parseFloat(r.querySelector('.provento-value-input').value) || 0;
+                if (val > 0) {
+                    list.push({ title, value: val });
+                }
+            });
+            return list;
+        }
+
+        function addValeInput(titleVal = '', valueVal = 0) {
+            const container = document.getElementById('valesContainer');
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 items-center vale-row';
+            div.innerHTML = `
+                <div class="sm:col-span-7">
+                    <input type="text" placeholder="Descrição do desconto / vale" value="${titleVal}" oninput="calculateHoleritePreview()" class="w-full bg-white border border-rose-200 rounded-lg py-1.5 px-2.5 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none vale-title-input">
+                </div>
+                <div class="sm:col-span-4">
+                    <input type="number" step="0.01" placeholder="Valor R$" value="${valueVal}" oninput="calculateHoleritePreview()" class="w-full bg-white border border-rose-200 rounded-lg py-1.5 px-2.5 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none vale-value-input">
+                </div>
+                <div class="sm:col-span-1 text-right">
+                    <button type="button" onclick="this.closest('.vale-row').remove(); calculateHoleritePreview();" class="text-rose-500 hover:text-rose-700 p-1.5">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+            calculateHoleritePreview();
+        }
+
+        function getValeDiscounts() {
+            const rows = document.querySelectorAll('.vale-row');
+            let list = [];
+            rows.forEach(r => {
+                let title = r.querySelector('.vale-title-input').value.trim() || 'Desconto';
+                let val = parseFloat(r.querySelector('.vale-value-input').value) || 0;
+                if (val > 0) {
+                    list.push({ title, value: val });
+                }
+            });
+            return list;
+        }
+
+        function addAbsenceDateInput(dateVal = '') {
+            const container = document.getElementById('absenceDatesContainer');
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2 absence-row';
+            div.innerHTML = `
+                <input type="date" value="${dateVal}" onchange="calculateHoleritePreview()" class="w-full bg-white border border-rose-200 rounded-lg py-1.5 px-2.5 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none absence-date-input">
+                <button type="button" onclick="this.parentElement.remove(); calculateHoleritePreview();" class="text-rose-500 hover:text-rose-700 p-1.5">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+            `;
+            container.appendChild(div);
+            calculateHoleritePreview();
+        }
+
+        function getAbsenceDates() {
+            const inputs = document.querySelectorAll('.absence-date-input');
+            let dates = [];
+            inputs.forEach(inp => {
+                if (inp.value) dates.push(inp.value);
+            });
+            return dates;
+        }
+
+        function loadEmployeeHoleriteDefaults() {
+            calculateHoleritePreview();
+        }
+
+        // --- Holerite Preview & Calculation Engine ---
+        function calculateHoleritePreview() {
+            const empId = document.getElementById('holeriteEmployeeSelect').value;
+            const paidDays = parseInt(document.getElementById('holeritePaidDays').value) || 30;
+            const bonusPercent = parseFloat(document.getElementById('holeriteBonusPercent').value) || 0;
+            
+            const proventoExtras = getProventosExtras();
+            const valeDiscounts = getValeDiscounts();
+
+            if (!empId) {
+                document.getElementById('previewProventos').textContent = 'R$ 0,00';
+                document.getElementById('previewDescontos').textContent = 'R$ 0,00';
+                document.getElementById('previewLiquido').textContent = 'R$ 0,00';
+                document.getElementById('previewItemizedList').innerHTML = '<p class="text-slate-400">Selecione um funcionário.</p>';
+                return null;
+            }
+
+            const emp = db.employees.find(e => e.id === empId);
+            if (!emp) return null;
+
+            const baseSalary = emp.salary;
+            const dailyRate = baseSalary / 30;
+            const proportionalBase = dailyRate * paidDays;
+
+            const absenceDates = getAbsenceDates();
+            const hasAbsences = absenceDates.length > 0;
+            
+            let bonusValue = 0;
+            if (!hasAbsences && bonusPercent > 0) {
+                bonusValue = (proportionalBase * bonusPercent) / 100;
+            }
+
+            let totalAbsenceValue = 0;
+            let itemizedHtml = '';
+            let breakdownList = [];
+
+            itemizedHtml += `<div class="flex justify-between"><span>Salário Base (${paidDays}d)</span><span>+ R$ ${proportionalBase.toFixed(2)}</span></div>`;
+
+            if (bonusValue > 0) {
+                itemizedHtml += `<div class="flex justify-between text-emerald-700 font-medium"><span>Bônus (${bonusPercent}%)</span><span>+ R$ ${bonusValue.toFixed(2)}</span></div>`;
+            } else if (hasAbsences && bonusPercent > 0) {
+                itemizedHtml += `<div class="flex justify-between text-rose-600"><span>Bônus (${bonusPercent}%) <span class="italic">(Perdido por faltas)</span></span><span>R$ 0,00</span></div>`;
+            }
+
+            let totalProventosExtras = 0;
+            proventoExtras.forEach(p => {
+                totalProventosExtras += p.value;
+                itemizedHtml += `<div class="flex justify-between text-emerald-700 font-medium"><span>${p.title}</span><span>+ R$ ${p.value.toFixed(2)}</span></div>`;
+            });
+
+            if (hasAbsences) {
+                absenceDates.forEach(dateStr => {
+                    let d = new Date(dateStr + 'T00:00:00');
+                    totalAbsenceValue += dailyRate;
+                    breakdownList.push(`Falta em ${d.toLocaleDateString('pt-BR')}: -R$ ${dailyRate.toFixed(2)}`);
+                });
+
+                let weeksMap = {};
+                absenceDates.forEach(dateStr => {
+                    let d = new Date(dateStr + 'T00:00:00');
+                    let year = d.getFullYear();
+                    let holidays = getBrazilianHolidays(year);
+
+                    let dayOfWeek = d.getDay();
+                    let diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                    let monday = new Date(d);
+                    monday.setDate(d.getDate() + diffToMonday);
+                    
+                    let sunday = new Date(monday);
+                    sunday.setDate(monday.getDate() + 6);
+
+                    let weekKey = `${year}-${monday.toISOString().split('T')[0]}`;
+                    if (!weeksMap[weekKey]) {
+                        weeksMap[weekKey] = { monday: monday, sunday: sunday, holidays: holidays, count: 0 };
+                    }
+                    weeksMap[weekKey].count++;
+                });
+
+                Object.keys(weeksMap).forEach(weekKey => {
+                    let w = weeksMap[weekKey];
+                    totalAbsenceValue += dailyRate;
+                    breakdownList.push(`DSR (Descanso) perdido na semana: -R$ ${dailyRate.toFixed(2)}`);
+
+                    w.holidays.forEach(hol => {
+                        if (hol >= w.monday && hol <= w.sunday) {
+                            totalAbsenceValue += dailyRate;
+                            breakdownList.push(`Feriado na semana (${hol.toLocaleDateString('pt-BR')}): -R$ ${dailyRate.toFixed(2)}`);
+                        }
+                    });
+                });
+
+                breakdownList.forEach(item => {
+                    itemizedHtml += `<div class="flex justify-between text-rose-600"><span>&bull; ${item.split(':')[0]}</span><span>- ${item.split(':')[1]}</span></div>`;
+                });
+            }
+
+            let totalValesValue = 0;
+            valeDiscounts.forEach(v => {
+                totalValesValue += v.value;
+                itemizedHtml += `<div class="flex justify-between text-rose-600"><span>${v.title}</span><span>- R$ ${v.value.toFixed(2)}</span></div>`;
+            });
+
+            document.getElementById('previewItemizedList').innerHTML = itemizedHtml;
+
+            const totalProventos = proportionalBase + bonusValue + totalProventosExtras;
+            const totalDescontos = totalValesValue + totalAbsenceValue;
+            const netSalary = Math.max(0, totalProventos - totalDescontos);
+
+            document.getElementById('previewProventos').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalProventos);
+            document.getElementById('previewDescontos').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalDescontos);
+            document.getElementById('previewLiquido').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(netSalary);
+
+            return {
+                employee: emp,
+                paidDays,
+                baseSalary,
+                proportionalBase,
+                bonusPercent,
+                bonusValue,
+                hasAbsences,
+                proventoExtras,
+                valeDiscounts,
+                absenceDates,
+                totalAbsenceValue,
+                totalProventos,
+                totalDescontos,
+                netSalary
+            };
+        }
+
+        function generateAndSaveHolerite() {
+            const data = calculateHoleritePreview();
+            if (!data) {
+                alert('Selecione um funcionário válido.');
+                return;
+            }
+
+            const month = document.getElementById('holeriteMonth').value;
+            const holeriteId = 'hol_' + Date.now();
+
+            const holeriteRecord = {
+                id: holeriteId,
+                employeeId: data.employee.id,
+                employeeName: data.employee.name,
+                month: month,
+                dateGenerated: new Date().toISOString(),
+                ...data
+            };
+
+            db.holerites.push(holeriteRecord);
+            saveData();
+            alert('Holerite gerado e salvo com sucesso no histórico!');
+            openHoleritePrintModal(holeriteRecord);
+        }
+
+        // --- Holerite Print / View Modal ---
+        function openHoleritePrintModal(record) {
+            const modal = document.getElementById('holeritePrintModal');
+            modal.classList.remove('hidden');
+
+            const fmt = val => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+            const monthFormatted = record.month ? new Date(record.month + '-01T00:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '-';
+
+            let itemsHtml = `
+                <div class="flex justify-between py-1.5 border-b border-slate-100 text-xs sm:text-sm">
+                    <span>Salário Base (${record.paidDays} dias)</span>
+                    <span class="font-semibold">+ ${fmt(record.proportionalBase)}</span>
+                </div>
+            `;
+
+            if (record.bonusValue > 0) {
+                itemsHtml += `
+                    <div class="flex justify-between py-1.5 border-b border-slate-100 text-xs sm:text-sm text-emerald-700">
+                        <span>Bônus (${record.bonusPercent}%)</span>
+                        <span class="font-semibold">+ ${fmt(record.bonusValue)}</span>
+                    </div>
+                `;
+            } else if (record.hasAbsences && record.bonusPercent > 0) {
+                itemsHtml += `
+                    <div class="flex justify-between py-1.5 border-b border-slate-100 text-xs sm:text-sm text-rose-600">
+                        <span>Bônus (${record.bonusPercent}%) - <span class="italic">Perdido por faltas</span></span>
+                        <span>R$ 0,00</span>
+                    </div>
+                `;
+            }
+
+            if (record.proventoExtras && record.proventoExtras.length > 0) {
+                record.proventoExtras.forEach(p => {
+                    itemsHtml += `
+                        <div class="flex justify-between py-1.5 border-b border-slate-100 text-xs sm:text-sm text-emerald-700">
+                            <span>${p.title}</span>
+                            <span class="font-semibold">+ ${fmt(p.value)}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            if (record.totalAbsenceValue > 0) {
+                itemsHtml += `
+                    <div class="flex justify-between py-1.5 border-b border-slate-100 text-xs sm:text-sm text-rose-600">
+                        <span>Desconto de Faltas / DSR / Feriados (Nac, Est SP, Mun Franca) (${record.absenceDates.length} falta(s))</span>
+                        <span class="font-semibold">- ${fmt(record.totalAbsenceValue)}</span>
+                    </div>
+                `;
+            }
+
+            if (record.valeDiscounts && record.valeDiscounts.length > 0) {
+                record.valeDiscounts.forEach(v => {
+                    itemsHtml += `
+                        <div class="flex justify-between py-1.5 border-b border-slate-100 text-xs sm:text-sm text-rose-600">
+                            <span>${v.title}</span>
+                            <span class="font-semibold">- ${fmt(v.value)}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            const htmlContent = `
+                <div class="text-center pb-4 border-b-2 border-slate-800">
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-slate-900">Demonstrativo de Pagamento (Holerite)</h2>
+                    <p class="text-xs text-slate-500 capitalize">Referência: ${monthFormatted}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs py-2 border-b border-slate-200">
+                    <div><strong>Funcionário:</strong> ${record.employeeName}</div>
+                    <div><strong>Admissão:</strong> ${record.employee.admission ? new Date(record.employee.admission + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</div>
+                </div>
+
+                <div class="py-2 space-y-1">
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Discriminação de Proventos e Descontos</div>
+                    ${itemsHtml}
+                </div>
+
+                <div class="bg-slate-100 p-4 rounded-xl space-y-2 mt-4">
+                    <div class="flex justify-between text-xs text-slate-700">
+                        <span>Total Proventos:</span>
+                        <span class="font-bold">${fmt(record.totalProventos)}</span>
+                    </div>
+                    <div class="flex justify-between text-xs text-slate-700">
+                        <span>Total Descontos:</span>
+                        <span class="font-bold text-rose-600">${fmt(record.totalDescontos)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm sm:text-base font-bold text-blue-900 pt-2 border-t border-slate-300">
+                        <span>Valor Líquido a Receber:</span>
+                        <span class="text-blue-700">${fmt(record.netSalary)}</span>
+                    </div>
+                </div>
+
+                <div class="pt-12 grid grid-cols-2 gap-8 text-center text-xs text-slate-500">
+                    <div class="border-t border-slate-400 pt-2">Assinatura da Empresa</div>
+                    <div class="border-t border-slate-400 pt-2">Assinatura do Funcionário</div>
+                </div>
+            `;
+
+            document.getElementById('holeritePaperContent').innerHTML = htmlContent;
+        }
+
+        function closeHoleritePrintModal() {
+            document.getElementById('holeritePrintModal').classList.add('hidden');
+        }
+
+        // --- Employee History & Rescisão ---
+        function renderEmployeeHistory() {
+            const listDiv = document.getElementById('employeeHistoryList');
+            const countSpan = document.getElementById('historyCount');
+            if (!currentActiveEmployeeId) return;
+
+            const records = db.holerites.filter(h => h.employeeId === currentActiveEmployeeId);
+            countSpan.textContent = `${records.length} holerite(s)`;
+            listDiv.innerHTML = '';
+
+            if (records.length === 0) {
+                listDiv.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Nenhum holerite emitido para este funcionário.</p>`;
+                return;
+            }
+
+            records.sort((a, b) => new Date(b.dateGenerated) - new Date(a.dateGenerated)).forEach(rec => {
+                const fmt = val => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+                const monthFormatted = rec.month ? new Date(rec.month + '-01T00:00:00').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '-';
+
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs';
+                card.innerHTML = `
+                    <div>
+                        <div class="font-bold text-slate-800 text-sm">Ref: ${monthFormatted}</div>
+                        <div class="text-slate-500">Líquido: <span class="font-semibold text-blue-700">${fmt(rec.netSalary)}</span></div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick='openHoleritePrintModal(${JSON.stringify(rec)})' class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold px-3 py-1.5 rounded-lg transition">Ver</button>
+                        <button onclick='deleteHolerite("${rec.id}")' class="bg-rose-100 hover:bg-rose-200 text-rose-700 font-semibold px-3 py-1.5 rounded-lg transition">Excluir</button>
+                    </div>
+                `;
+                listDiv.appendChild(card);
+            });
+        }
+
+        function deleteHolerite(holId) {
+            if (confirm('Deseja excluir este holerite do histórico?')) {
+                db.holerites = db.holerites.filter(h => h.id !== holId);
+                saveData();
+                renderEmployeeHistory();
+            }
+        }
+
+        // --- Automatic Rescission Base Calculator ---
+        function calculateAutomaticRescisaoValues() {
+            const emp = db.employees.find(e => e.id === currentActiveEmployeeId);
+            if (!emp || !emp.admission) return null;
+
+            const admissionDate = new Date(emp.admission + 'T00:00:00');
+            const dismissalDate = emp.dismissal ? new Date(emp.dismissal + 'T00:00:00') : new Date();
+
+            if (dismissalDate < admissionDate) return null;
+
+            const diffTime = Math.abs(dismissalDate - admissionDate);
+            const diffDaysTotal = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const yearsWorked = Math.floor(diffDaysTotal / 365);
+            
+            const salary = emp.salary;
+            const dailyRate = salary / 30;
+
+            const daysWorkedInMonth = dismissalDate.getDate();
+            const saldoSalario = dailyRate * daysWorkedInMonth;
+
+            const currentYear = dismissalDate.getFullYear();
+            const startOfYear = new Date(currentYear, 0, 1);
+            const calcStart13 = admissionDate > startOfYear ? admissionDate : startOfYear;
+            const months13 = Math.max(1, (dismissalDate.getFullYear() - calcStart13.getFullYear()) * 12 + (dismissalDate.getMonth() - calcStart13.getMonth()) + (dismissalDate.getDate() >= 15 ? 1 : 0));
+            const proportional13 = (salary / 12) * Math.min(12, months13);
+
+            const vacationMonths = Math.floor(diffDaysTotal / 30) % 12;
+            const feriasProp = (salary / 12) * vacationMonths;
+            const tercoFerias = feriasProp / 3;
+            const totalFerias = feriasProp + tercoFerias;
+
+            const avisoTipo = document.getElementById('rescisaoAvisoTipo').value;
+            let avisoDias = 30 + (Math.min(yearsWorked, 20) * 3);
+            let avisoValor = (salary / 30) * avisoDias;
+            if (avisoTipo === 'trabalhado' || avisoTipo === 'dispensado') {
+                avisoValor = 0;
+            }
+
+            const totalMonthsWorked = Math.max(1, Math.floor(diffDaysTotal / 30));
+            const fgtsEstimado = (salary * 0.08) * totalMonthsWorked;
+            const multaPercent = parseFloat(document.getElementById('rescisaoMultaFgts').value) || 0;
+            const multaFgtsValor = (fgtsEstimado * multaPercent) / 100;
+
+            return { saldoSalario, proportional13, totalFerias, avisoValor, multaFgtsValor };
+        }
+
+        // --- Init or Load Rescission State ---
+        function initOrLoadRescisaoState() {
+            const auto = calculateAutomaticRescisaoValues();
+            if (!auto) {
+                const box = document.getElementById('rescisaoResultBox');
+                box.innerHTML = `<p class="text-xs text-rose-600">Informe a data de admissão do funcionário para calcular a rescisão.</p>`;
+                return;
+            }
+
+            if (!rescisaoState.initialized) {
+                rescisaoState = {
+                    initialized: true,
+                    saldo: auto.saldoSalario,
+                    t13: auto.proportional13,
+                    ferias: auto.totalFerias,
+                    aviso: auto.avisoValor,
+                    multa: auto.multaFgtsValor,
+                    activeSaldo: true,
+                    active13: true,
+                    activeFerias: true,
+                    activeAviso: true,
+                    activeMulta: true
+                };
+            }
+            renderRescisaoUI();
+        }
+
+        function recalculateRescisaoDefaults() {
+            const auto = calculateAutomaticRescisaoValues();
+            if (!auto) {
+                alert('Informe uma data de admissão válida.');
+                return;
+            }
+            rescisaoState.saldo = auto.saldoSalario;
+            rescisaoState.t13 = auto.proportional13;
+            rescisaoState.ferias = auto.totalFerias;
+            rescisaoState.aviso = auto.avisoValor;
+            rescisaoState.multa = auto.multaFgtsValor;
+            renderRescisaoUI();
+        }
+
+        function onRescisaoParamChange() {
+            const auto = calculateAutomaticRescisaoValues();
+            if (auto) {
+                if (rescisaoState.activeAviso) rescisaoState.aviso = auto.avisoValor;
+                if (rescisaoState.activeMulta) rescisaoState.multa = auto.multaFgtsValor;
+            }
+            renderRescisaoUI();
+        }
+
+        function toggleRescisaoField(key, checkbox) {
+            rescisaoState['active' + key.charAt(0).toUpperCase() + key.slice(1)] = checkbox.checked;
+            renderRescisaoUI();
+        }
+
+        function updateRescisaoInputValue(key, input) {
+            let val = parseFloat(input.value);
+            rescisaoState[key] = isNaN(val) ? 0 : val;
+            updateRescisaoTotalNet();
+        }
+
+        function updateRescisaoTotalNet() {
+            const s = rescisaoState;
+            const total = 
+                (s.activeSaldo ? s.saldo : 0) +
+                (s.active13 ? s.t13 : 0) +
+                (s.activeFerias ? s.ferias : 0) +
+                (s.activeAviso ? s.aviso : 0) +
+                (s.activeMulta ? s.multa : 0);
+
+            const netEl = document.getElementById('rescisaoTotalNetDisplay');
+            if (netEl) {
+                netEl.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
+            }
+        }
+
+        function renderRescisaoUI() {
+            const box = document.getElementById('rescisaoResultBox');
+            if (!currentActiveEmployeeId) return;
+
+            const s = rescisaoState;
+            const iosToggle = (key, isChecked) => `
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRescisaoField('${key}', this)" class="sr-only peer">
+                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            `;
+
+            box.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Saldo de Salário -->
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border ${s.activeSaldo ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-50'} space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-slate-500 font-medium">Saldo de Salário (R$)</span>
+                            ${iosToggle('saldo', s.activeSaldo)}
+                        </div>
+                        <input type="number" step="0.01" value="${s.saldo.toFixed(2)}" ${!s.activeSaldo ? 'disabled' : ''} oninput="updateRescisaoInputValue('saldo', this)" class="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-100">
+                    </div>
+
+                    <!-- 13º Proporcional -->
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border ${s.active13 ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-50'} space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-slate-500 font-medium">13º Salário Proporcional (R$)</span>
+                            ${iosToggle('13', s.active13)}
+                        </div>
+                        <input type="number" step="0.01" value="${s.t13.toFixed(2)}" ${!s.active13 ? 'disabled' : ''} oninput="updateRescisaoInputValue('t13', this)" class="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-100">
+                    </div>
+
+                    <!-- Férias + 1/3 -->
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border ${s.activeFerias ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-50'} space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-slate-500 font-medium">Férias Proporcionais + 1/3 (R$)</span>
+                            ${iosToggle('ferias', s.activeFerias)}
+                        </div>
+                        <input type="number" step="0.01" value="${s.ferias.toFixed(2)}" ${!s.activeFerias ? 'disabled' : ''} oninput="updateRescisaoInputValue('ferias', this)" class="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-100">
+                    </div>
+
+                    <!-- Aviso Prévio -->
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border ${s.activeAviso ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-50'} space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-slate-500 font-medium">Aviso Prévio Indenizado (R$)</span>
+                            ${iosToggle('aviso', s.activeAviso)}
+                        </div>
+                        <input type="number" step="0.01" value="${s.aviso.toFixed(2)}" ${!s.activeAviso ? 'disabled' : ''} oninput="updateRescisaoInputValue('aviso', this)" class="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-100">
+                    </div>
+
+                    <!-- Multa FGTS -->
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border ${s.activeMulta ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-50'} space-y-2 sm:col-span-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-slate-500 font-medium">Multa do FGTS (R$)</span>
+                            ${iosToggle('multa', s.activeMulta)}
+                        </div>
+                        <input type="number" step="0.01" value="${s.multa.toFixed(2)}" ${!s.activeMulta ? 'disabled' : ''} oninput="updateRescisaoInputValue('multa', this)" class="w-full bg-white border border-slate-300 rounded-xl py-2 px-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-100">
+                    </div>
+
+                    <!-- Total Rescisório -->
+                    <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 sm:col-span-2 flex justify-between items-center">
+                        <div>
+                            <div class="text-xs text-emerald-700 font-semibold uppercase tracking-wider">Total Rescisório Líquido</div>
+                            <div class="text-xs text-emerald-600">Considera apenas os itens ativados</div>
+                        </div>
+                        <div id="rescisaoTotalNetDisplay" class="text-lg sm:text-xl font-extrabold text-emerald-800">R$ 0,00</div>
+                    </div>
+                </div>
+            `;
+            updateRescisaoTotalNet();
+        }
+
+        function calculateRescisao() {
+            initOrLoadRescisaoState();
+        }
+
+        function generateAndSaveRescisaoPDF() {
+            const emp = db.employees.find(e => e.id === currentActiveEmployeeId);
+            if (!emp) {
+                alert('Selecione um funcionário válido.');
+                return;
+            }
+
+            const modal = document.getElementById('rescisaoPrintModal');
+            modal.classList.remove('hidden');
+
+            const fmt = val => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+            const s = rescisaoState;
+
+            const items = [];
+            let totalRescisao = 0;
+
+            if (s.activeSaldo && s.saldo > 0) {
+                items.push({ title: 'Saldo de Salário', value: s.saldo });
+                totalRescisao += s.saldo;
+            }
+            if (s.active13 && s.t13 > 0) {
+                items.push({ title: '13º Salário Proporcional', value: s.t13 });
+                totalRescisao += s.t13;
+            }
+            if (s.activeFerias && s.ferias > 0) {
+                items.push({ title: 'Férias Proporcionais + 1/3', value: s.ferias });
+                totalRescisao += s.ferias;
+            }
+            if (s.activeAviso && s.aviso > 0) {
+                items.push({ title: `Aviso Prévio (${document.getElementById('rescisaoAvisoTipo').value})`, value: s.aviso });
+                totalRescisao += s.aviso;
+            }
+            if (s.activeMulta && s.multa > 0) {
+                items.push({ title: `Multa do FGTS (${document.getElementById('rescisaoMultaFgts').value}%)`, value: s.multa });
+                totalRescisao += s.multa;
+            }
+
+            let itemsHtml = '';
+            items.forEach(item => {
+                itemsHtml += `
+                    <div class="flex justify-between py-2 border-b border-slate-100 text-xs sm:text-sm">
+                        <span>${item.title}</span>
+                        <span class="font-semibold text-slate-800">+ ${fmt(item.value)}</span>
+                    </div>
+                `;
+            });
+
+            if (items.length === 0) {
+                itemsHtml = `<div class="text-xs text-slate-400 py-4 text-center">Nenhum item ativo na rescisão.</div>`;
+            }
+
+            const admissionFormatted = emp.admission ? new Date(emp.admission + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+            const dismissalFormatted = emp.dismissal ? new Date(emp.dismissal + 'T00:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+
+            const htmlContent = `
+                <div class="text-center pb-4 border-b-2 border-slate-800 space-y-1">
+                    <h2 class="text-lg font-bold uppercase tracking-wide text-slate-900">Termo de Rescisão de Contrato de Trabalho</h2>
+                    <p class="text-xs text-slate-500">Demonstrativo de Valores Rescisórios</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs py-3 border-b border-slate-200">
+                    <div><strong>Funcionário:</strong> ${emp.name}</div>
+                    <div><strong>Salário Base:</strong> ${fmt(emp.salary)}</div>
+                    <div><strong>Admissão:</strong> ${admissionFormatted}</div>
+                    <div><strong>Desligamento:</strong> ${dismissalFormatted}</div>
+                    <div><strong>Aviso Prévio:</strong> <span class="capitalize">${document.getElementById('rescisaoAvisoTipo').value}</span></div>
+                    <div><strong>Multa FGTS:</strong> ${document.getElementById('rescisaoMultaFgts').value}%</div>
+                </div>
+
+                <div class="py-3 space-y-1">
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Itens Integrantes da Rescisão</div>
+                    ${itemsHtml}
+                </div>
+
+                <div class="bg-emerald-50 p-4 rounded-xl space-y-2 mt-4 border border-emerald-200">
+                    <div class="flex justify-between text-sm sm:text-base font-bold text-emerald-900">
+                        <span>Total Líquido Rescisório:</span>
+                        <span class="text-emerald-700">${fmt(totalRescisao)}</span>
+                    </div>
+                </div>
+
+                <div class="pt-16 grid grid-cols-2 gap-8 text-center text-xs text-slate-500">
+                    <div class="border-t border-slate-400 pt-2">Assinatura da Empresa</div>
+                    <div class="border-t border-slate-400 pt-2">Assinatura do Funcionário</div>
+                </div>
+            `;
+
+            document.getElementById('rescisaoPaperContent').innerHTML = htmlContent;
+        }
+
+        function closeRescisaoPrintModal() {
+            document.getElementById('rescisaoPrintModal').classList.add('hidden');
+        }
+
+        // --- Export & Import ---
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `folha_facil_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.employees && parsed.holerites) {
+                        db = parsed;
+                        saveData();
+                        renderEmployees();
+                        alert('Dados importados com sucesso!');
+                    } else {
+                        alert('Arquivo de backup inválido.');
+                    }
+                } catch (err) {
+                    alert('Erro ao ler arquivo JSON.');
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
